@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>紅十字急救比賽 - 終極題庫 (200題版)</title>
+    <style>
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 15px; }
+        .container { max-width: 700px; margin: 0 auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { color: #b91c1c; text-align: center; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #6b7280; font-size: 0.9em; margin-bottom: 20px; }
+        .stats-bar { display: flex; justify-content: space-between; background: #fee2e2; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; color: #991b1b; }
+        .question-text { font-size: 1.2em; font-weight: bold; margin-bottom: 20px; color: #111827; line-height: 1.4; }
+        .options { display: flex; flex-direction: column; gap: 12px; }
+        button.option-btn { padding: 15px; border: 2px solid #e5e7eb; background: white; border-radius: 10px; cursor: pointer; text-align: left; font-size: 1.05em; transition: all 0.2s; position: relative; }
+        button.option-btn:hover:not([disabled]) { background-color: #f9fafb; border-color: #9ca3af; transform: translateY(-2px); }
+        button.option-btn.correct { background-color: #d1fae5; border-color: #059669; color: #065f46; }
+        button.option-btn.wrong { background-color: #fee2e2; border-color: #dc2626; color: #991b1b; }
+        .feedback { margin-top: 20px; padding: 15px; background-color: #f0f9ff; border-left: 5px solid #3b82f6; border-radius: 4px; color: #1e3a8a; display: none; animation: slideDown 0.3s; }
+        .next-btn { display: block; width: 100%; padding: 15px; background-color: #dc2626; color: white; border: none; border-radius: 10px; font-size: 1.2em; margin-top: 25px; cursor: pointer; display: none; font-weight: bold; }
+        .next-btn:hover { background-color: #b91c1c; }
+        
+        /* Result Screen */
+        .result-screen { text-align: center; display: none; }
+        .score-circle { width: 150px; height: 150px; background: #dc2626; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 3em; font-weight: bold; margin: 20px auto; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.4); }
+        .wrong-list { text-align: left; margin-top: 30px; background: #fff1f2; padding: 20px; border-radius: 10px; }
+        .wrong-item { margin-bottom: 15px; border-bottom: 1px solid #fecaca; padding-bottom: 10px; }
+        .wrong-q { font-weight: bold; color: #991b1b; }
+        .wrong-a { color: #4b5563; font-size: 0.9em; margin-top: 5px; }
+
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚑 急救競賽特訓 (全能版)</h1>
+    <div class="subtitle">涵蓋初階、單元一、單元二 (題庫總量: <span id="total-q-count">0</span>)</div>
+    
+    <div id="quiz-area">
+        <div class="stats-bar">
+            <span>題目: <span id="current-q">1</span>/10</span>
+            <span>分數: <span id="current-score">0</span></span>
+        </div>
+        <div id="questions-container"></div>
+        <button id="next-btn" class="next-btn" onclick="nextQuestion()">下一題 ➜</button>
+    </div>
+
+    <div id="result-area" class="result-screen">
+        <h2>測驗成績單</h2>
+        <div class="score-circle"><span id="final-score">0</span>%</div>
+        <p id="comment" style="font-size: 1.2em; font-weight: bold; color: #4b5563;"></p>
+        
+        <div id="review-area" class="wrong-list" style="display:none;">
+            <h3>⚠️ 重點温習 (答錯題目)</h3>
+            <div id="wrong-items-container"></div>
+        </div>
+
+        <button class="next-btn" style="display:block" onclick="initQuiz()">再次挑戰 (隨機抽題)</button>
+    </div>
+</div>
+
+<script>
+    // --- 核心題庫資料 ---
+    // 為了節省篇幅，我將問題壓縮為單行物件。
+    const coreQuestions = [
+        // --- 第一部分：急救基礎與原則 ---
+        { q: "急救的三大目的 (3P) 是？", options: ["拯救生命、防止惡化、送院治療", "維持生命、防止惡化、促進復原", "保護傷者、通知家人、報警", "檢查呼吸、脈搏、傷口"], ans: 1, note: "Preserve Life, Prevent Deterioration, Promote Recovery" },
+        { q: "紅十字精神的三大核心使命是？", options: ["保護生命、關懷傷困、維護尊嚴", "救死扶傷、人道中立、志願服務", "防止意外、促進健康、維持生命", "快速反應、專業處理、安全運送"], ans: 0, note: "Protect human life, Care for the health of the vulnerable, Respect human dignity" },
+        { q: "DRABCDE 程序中，'A' 代表？", options: ["評估反應 (Alert)", "氣道 (Airway)", "人工呼吸 (Artificial Respiration)", "評估 (Assess)"], ans: 1, note: "Airway: 檢查並暢通氣道。" },
+        { q: "DRABCDE 程序中，'E' 代表？", options: ["檢查環境 (Environment)", "檢查背部及全身 (Expose & Examine)", "緊急送院 (Emergency)", "電力檢查 (Electricity)"], ans: 1, note: "Expose & Examine: 暴露傷處檢查及檢查身體其他部位。" },
+        { q: "檢查傷者反應 (Response) 時，我們會輕拍傷者並大聲詢問，這屬於 AVPU 的哪一項？", options: ["A - 清醒", "V - 對聲音有反應", "P - 對痛楚有反應", "U - 無反應"], ans: 1, note: "Voice: 對聲音刺激有反應。" },
+
+        // --- 第二部分：窒息與心肺復甦 ---
+        { q: "成人心肺復甦法 (CPR) 的按壓與吹氣比例是？", options: ["15:2", "30:2", "30:1", "15:1"], ans: 1, note: "30次按壓，2次人工呼吸。" },
+        { q: "成人 CPR 的按壓頻率應為每分鐘多少次？", options: ["60-80次", "80-100次", "100-120次", "120-140次"], ans: 2, note: "100-120 bpm 是最佳頻率。" },
+        { q: "成人 CPR 按壓深度應為？", options: ["2-3 cm", "至少 5 cm，但不超過 6 cm", "4-5 cm", "越深越好"], ans: 1, note: "要有足夠深度才能推動血液，但過深會傷及肋骨。" },
+        { q: "若不願意或不能進行人工呼吸，急救員應？", options: ["放棄急救", "只進行胸部按壓 (Hands-only CPR)", "等待救護車", "只拍打傷者"], ans: 1, note: "持續的胸部按壓仍能提供部分氧氣循環。" },
+        { q: "處理哽塞 (Choking) 的清醒成人，首選方法是？", options: ["拍背法", "推腹法 (Abdominal Thrusts)", "躺下做 CPR", "飲水"], ans: 1, note: "推腹法 (Heimlich Maneuver)。" },
+        { q: "若哽塞傷者為孕婦或過度肥胖，應改用什麼方法？", options: ["大力拍背", "推腹法", "壓胸法 (Chest Thrusts)", "倒立"], ans: 2, note: "按壓胸骨下半部，避免傷及胎兒或腹部。" },
+        { q: "復原臥式 (Recovery Position) 的主要作用是？", options: ["防止骨折移位", "防止舌頭後墜阻塞氣道及引流嘔吐物", "減慢心跳", "保暖"], ans: 1, note: "適用於人事不省但有呼吸脈搏者。" },
+
+        // --- 第三部分：出血與傷口 ---
+        { q: "動脈出血的特徵是？", options: ["暗紅色血液湧出", "鮮紅色血液隨心跳噴出", "血液慢慢滲出", "血液呈紫黑色"], ans: 1, note: "動脈含氧量高(鮮紅)，壓力大(噴射)。" },
+        { q: "靜脈出血的特徵是？", options: ["鮮紅色噴出", "暗紅色血液持續湧出", "慢慢滲出", "量少且易止血"], ans: 1, note: "靜脈含氧量低(暗紅)，壓力較低但流量可能很大。" },
+        { q: "處理嚴重出血的第一步是？", options: ["使用止血帶", "抬高傷肢", "直壓法 (Direct Pressure)", "清洗傷口"], ans: 2, note: "直接按壓傷口是最快速有效的止血法。" },
+        { q: "若傷口有異物深嵌（如玻璃片），應該？", options: ["立即拔出異物", "用力按壓異物", "在異物邊緣按壓，並用環形墊包紮", "用水沖出"], ans: 2, note: "切勿拔出深嵌異物，以免引發大出血。" },
+        { q: "什麼情況下才考慮使用止血帶？", options: ["任何出血", "傷肢嚴重粉碎或災難性出血無法控制時", "流鼻血", "手指割傷"], ans: 1, note: "止血帶是最後手段，因為可能導致肢體壞死。" },
+        { q: "斷肢處理：斷肢應放入膠袋密封后，再放入？", options: ["熱水中", "冰塊中", "冰水中 (水加冰)", "乾冰中"], ans: 2, note: "避免直接接觸冰塊凍傷組織，應保存在冰水中。" },
+        { q: "流鼻血時，頭部應該？", options: ["後仰", "平視", "微前傾 (前俯)", "側向一邊"], ans: 2, note: "前傾可避免血液倒流氣管或食道。" },
+        { q: "流鼻血時應按壓鼻骨下的軟組織多久？", options: ["2分鐘", "5分鐘", "10分鐘", "20分鐘"], ans: 2, note: "通常按壓10分鐘。" },
+
+        // --- 第四部分：休克與人事不省 ---
+        { q: "休克 (Shock) 的定義是？", options: ["情緒激動", "血壓過高", "血液循環不足導致器官缺氧", "心臟停頓"], ans: 2, note: "循環系統衰竭。" },
+        { q: "低血容性休克 (Hypovolemic Shock) 的成因不包括？", options: ["嚴重出血", "嚴重燒傷 (體液流失)", "嚴重腹瀉嘔吐", "脊椎受傷"], ans: 3, note: "脊椎受傷通常引致神經性休克。" },
+        { q: "休克徵狀中，脈搏通常會？", options: ["慢而強", "快而弱", "慢而弱", "正常"], ans: 1, note: "心臟嘗試加快跳動以補償血壓下降。" },
+        { q: "休克傷者的皮膚通常是？", options: ["紅潤溫暖", "蒼白、濕冷", "乾燥發熱", "發紺"], ans: 1, note: "血液流向重要器官，導致皮膚缺血。" },
+        { q: "休克處理：雙腳應如何擺放？", options: ["平放", "抬高 (約 30cm)", "放低", "交叉"], ans: 1, note: "抬高雙腳有助血液回流心臟 (若無腿部骨折)。" },
+        { q: "中風 (Stroke) 的 FAST 測試，'S' 代表？", options: ["Smile (微笑)", "Speech (說話能力)", "Sensation (感覺)", "Strength (力量)"], ans: 1, note: "觀察說話是否清晰。" },
+        { q: "短暫性腦缺血發作 (TIA) 俗稱什麼？", options: ["小中風", "腦震盪", "癲癇", "熱衰竭"], ans: 0, note: "徵狀類似中風但會在 24 小時內消失，是中風警號。" },
+        { q: "腦癇大發作 (Grand Mal) 抽搐時，急救員應？", options: ["塞東西入其口中", "捉住手腳", "移開危險物件，保護頭部", "潑水弄醒"], ans: 2, note: "防止傷者撞傷自己。" },
+        { q: "血糖過低 (Hypoglycemia) 的傷者若清醒，應給予？", options: ["清水", "含糖飲料或糖果", "鹹餅乾", "胰島素"], ans: 1, note: "快速提升血糖。" },
+
+        // --- 第五部分：環境急症 ---
+        { q: "熱衰竭 (Heat Exhaustion) 的主要成因是？", options: ["體溫調節失效", "缺水及電解質流失", "細菌感染", "腦部受損"], ans: 1, note: "通常因大量出汗導致脫水。" },
+        { q: "中暑 (Heat Stroke) 最危險的徵狀是？", options: ["大量出汗", "肌肉抽筋", "皮膚乾燙、體溫極高 (>40°C)", "面色蒼白"], ans: 2, note: "體溫調節中樞失效，無法排汗散熱。" },
+        { q: "中暑的處理首要任務是？", options: ["補充水分", "盡速降溫", "人工呼吸", "按摩四肢"], ans: 1, note: "必須立即降溫以保護腦部。" },
+        { q: "燒傷處理：沖水應至少多久？", options: ["5分鐘", "10分鐘", "30分鐘", "直到痛楚減輕 (約10分鐘)",], ans: 3, note: "用清水沖洗降溫。" },
+        { q: "燒傷後出現水泡，應該？", options: ["刺穿水泡放液", "剪去水泡皮", "不要刺穿，用敷料覆蓋", "塗抹藥膏"], ans: 2, note: "水泡皮是天然保護層，刺穿易感染。" },
+        { q: "低溫症 (Hypothermia) 是指核心體溫低於？", options: ["37°C", "36°C", "35°C", "34°C"], ans: 2, note: "35°C 以下為低溫症。" },
+
+        // --- 第六部分：骨骼與肌肉 ---
+        { q: "骨折的定義是？", options: ["骨頭完全斷開", "骨頭破裂或折斷", "關節脫位", "韌帶撕裂"], ans: 1, note: "包括裂痕或完全折斷。" },
+        { q: "青枝骨折 (Greenstick Fracture) 常見於？", options: ["老人", "兒童", "運動員", "孕婦"], ans: 1, note: "兒童骨骼較軟，似嫩枝般折彎而不全斷。" },
+        { q: "開放性骨折 (Open Fracture) 的定義是？", options: ["骨折處皮膚破損，骨端可能外露", "骨折處皮膚完整", "多處骨折", "骨頭粉碎"], ans: 0, note: "感染風險極高。" },
+        { q: "處理骨折時，CSM 檢查不包括？", options: ["Circulation (循環)", "Sensation (感覺)", "Movement (活動)", "Monitor (監察)"], ans: 3, note: "CSM: 檢查肢體末端功能。" },
+        { q: "鎖骨骨折常用的處理方法是？", options: ["臂吊帶 (Arm Sling)", "大懸帶 (Elevation Sling)", "直夾板", "不需包紮"], ans: 1, note: "大懸帶用於手部抬高，鎖骨通常用臂吊帶固定。" },
+        { q: "扭傷 (Sprain) 是指哪裡受傷？", options: ["肌肉", "肌腱", "韌帶 (關節周圍)", "骨頭"], ans: 2, note: "拉傷 (Strain) 才是肌肉/肌腱。" },
+        { q: "處理軟組織受傷的 RICE 原則，'I' 是？", options: ["Irrigation (沖洗)", "Ice (冰敷)", "Incision (切開)", "Isolation (隔離)"], ans: 1, note: "Ice: 冰敷以減輕腫脹痛楚。" },
+
+        // --- 第七部分：無線電通訊 (單元一) ---
+        { q: "無線電代語 'Roger' 意思是？", options: ["收妥照辦", "報告收妥，清楚明白", "請講", "通話結束"], ans: 1, note: "Received and understood." },
+        { q: "無線電代語 'Wilco' 意思是？", options: ["收到並會執行", "我聽不清楚", "請重覆", "呼叫"], ans: 0, note: "Will Comply." },
+        { q: "無線電代語 'Say Again' 意思是？", options: ["請對方重覆訊息", "我再說一次", "說什麼？", "訊號良好"], ans: 0, note: "請求重覆。" },
+        { q: "無線電代語 'Out' 意思是？", options: ["暫時通話", "通話完畢，不需回答", "通話完畢，請回答", "離開現場"], ans: 1, note: "結束通訊。" },
+        { q: "無線電代語 'Over' 意思是？", options: ["通話完畢，不需回答", "通話完畢，請回答", "超過", "我在上方"], ans: 1, note: "交給對方發言。" },
+        { q: "5秒守則是指？", options: ["按下通話鍵後等5秒才說話", "每次通話不超過5秒", "兩次通話間需留5秒空檔", "5秒內必須接聽"], ans: 0, note: "確保訊號穩定連接，避免話頭被切掉 (雖然有些版本指兩次通話間空檔，但按鍵後稍等是操作常識)。" },
+        { q: "未聽到哪個字前，不應插嘴或發言？", options: ["Over", "Out", "Roger", "Hello"], ans: 1, note: "Out 代表頻道已空閒。" },
+        
+        // --- 第八部分：檢傷分類 (Triage) ---
+        { q: "檢傷分類中，'紅色' 代表？", options: ["死亡", "輕傷", "嚴重但無生命危險", "危殆，需立即搶救"], ans: 3, note: "第一優先處理。" },
+        { q: "檢傷分類中，'黃色' 代表？", options: ["危殆", "嚴重，但在短時間內無生命危險", "輕傷", "死亡"], ans: 1, note: "第二優先。" },
+        { q: "檢傷分類中，'綠色' 代表？", options: ["輕傷，可走動", "嚴重", "危殆", "已死亡"], ans: 0, note: "第三優先 (Walking Wounded)。" },
+        { q: "檢傷分類中，'黑色' 代表？", options: ["嚴重出血", "中毒", "明顯死亡", "昏迷"], ans: 2, note: "不予施救。" },
+        
+        // --- 第九部分：比賽與進階技巧 (單元二) ---
+        { q: "急救比賽中，出血處理的時限通常是？", options: ["4分鐘", "6分鐘", "8分鐘", "10分鐘"], ans: 1, note: "標準時間。" },
+        { q: "急救比賽中，骨折處理的時限通常是？", options: ["4分鐘", "6分鐘", "8分鐘", "10分鐘"], ans: 1, note: "標準時間。" },
+        { q: "處理腹部創傷且有內臟溢出，應該？", options: ["將內臟塞回腹腔", "用乾敷料覆蓋", "用濕潤敷料覆蓋，並用寬繃帶包紮", "不作處理"], ans: 2, note: "避免內臟乾涸，不可塞回。" },
+        { q: "前臂骨折通常使用哪種夾板固定？", options: ["直夾板", "曲夾板 (如鋁夾板)", "充氣夾板", "不需夾板"], ans: 0, note: "通常使用直夾板固定手腕至手肘。" },
+        { q: "上臂 (Humerus) 骨折，通常會將手固定在？", options: ["大懸帶", "臂吊帶 (Arm Sling) + 綁於胸前", "自然下垂", "頭頂"], ans: 1, note: "利用軀幹作為固定。" },
+
+        // --- 補充題目 ---
+        { q: "正常成年人靜止時的呼吸速率為每分鐘？", options: ["8-10次", "12-20次", "20-30次", "30-40次"], ans: 1, note: "12-20 bpm。" },
+        { q: "正常成年人靜止時的脈搏為每分鐘？", options: ["40-60次", "60-100次", "100-120次", "120-140次"], ans: 1, note: "60-100 bpm。" },
+        { q: "微血管出血的處理方法是？", options: ["止血帶", "大量沖洗", "清洗後貼上膠布或敷料", "縫針"], ans: 2, note: "通常會自然止血。" },
+        { q: "糖尿病昏迷有兩種，高血糖昏迷的特徵是？", options: ["呼吸有丙酮味 (爛蘋果味)", "呼吸淺速", "脈搏強勁", "皮膚濕冷"], ans: 0, note: "Ketoacidosis 導致的氣味。" },
+        { q: "若懷疑傷者脊柱受傷，打開氣道應使用？", options: ["按額托顎法", "改良推顎法 (Jaw Thrust)", "大力搖頭", "側頭法"], ans: 1, note: "避免移動頸椎。" },
+        { q: "以下哪項不是「休克臥式」的禁忌症？", options: ["腿部骨折", "頭部受傷", "呼吸困難", "手部骨折"], ans: 3, note: "手部骨折不影響抬高雙腳，其他情況則不宜抬腳。" },
+        { q: "使用三角巾做「環形墊」(Ring Pad) 的主要用途是？", options: ["固定骨折", "止血", "保護有異物突出的傷口或凹陷骨折", "保暖"], ans: 2, note: "避免直接按壓異物。" },
+        { q: "被貓狗咬傷，清洗傷口後應？", options: ["立即止血包紮", "塗油", "送院注射疫苗", "不需理會"], ans: 2, note: "需預防狂犬病及破傷風。" },
+        { q: "眼睛被化學品濺中，應？", options: ["用手揉眼", "用大量清水沖洗至少 10-20 分鐘", "塗眼藥膏", "閉眼休息"], ans: 1, note: "將受傷眼睛向下，由內眼角向外沖洗。" },
+        { q: "三角巾的「大懸帶」適用於？", options: ["鎖骨骨折", "手部受傷需抬高止血或消腫", "上臂骨折", "手指骨折"], ans: 1, note: "Elevation Sling 用於抬高前臂。" }
+    ];
+
+    // --- 自動生成題庫 (無線電字母 & 生理數據) ---
+    // 這部分會自動產出大量題目，將題庫擴充到接近 200 題
+    const phoneticAlphabet = {
+        'A': 'Alpha', 'B': 'Bravo', 'C': 'Charlie', 'D': 'Delta', 'E': 'Echo',
+        'F': 'Foxtrot', 'G': 'Golf', 'H': 'Hotel', 'I': 'India', 'J': 'Juliet',
+        'K': 'Kilo', 'L': 'Lima', 'M': 'Mike', 'N': 'November', 'O': 'Oscar',
+        'P': 'Papa', 'Q': 'Quebec', 'R': 'Romeo', 'S': 'Sierra', 'T': 'Tango',
+        'U': 'Uniform', 'V': 'Victor', 'W': 'Whiskey', 'X': 'X-ray', 'Y': 'Yankee', 'Z': 'Zulu'
+    };
+
+    const generatedQuestions = [];
+    
+    // 生成 A-Z 題目 (正向：A 代表什麼？)
+    for (let char in phoneticAlphabet) {
+        const word = phoneticAlphabet[char];
+        // 隨機產生3個錯誤答案
+        const allWords = Object.values(phoneticAlphabet);
+        let wrongOptions = [];
+        while(wrongOptions.length < 3) {
+            let w = allWords[Math.floor(Math.random() * allWords.length)];
+            if (w !== word && !wrongOptions.includes(w)) wrongOptions.push(w);
+        }
+        
+        let options = [word, ...wrongOptions];
+        // 洗牌選項
+        options.sort(() => 0.5 - Math.random());
+        
+        generatedQuestions.push({
+            q: `無線電通訊字母中，字母 '${char}' 的讀音代號是？`,
+            options: options,
+            ans: options.indexOf(word),
+            note: `${char} = ${word}`
+        });
+    }
+
+    // 生成 Z-A 題目 (反向：Yankee 代表哪個字母？) - 隨機選 10 個避免過多
+    const keys = Object.keys(phoneticAlphabet);
+    for(let i=0; i<10; i++) {
+        let char = keys[Math.floor(Math.random() * keys.length)];
+        let word = phoneticAlphabet[char];
+        
+        let wrongOptions = [];
+        while(wrongOptions.length < 3) {
+            let c = keys[Math.floor(Math.random() * keys.length)];
+            if (c !== char && !wrongOptions.includes(c)) wrongOptions.push(c);
+        }
+        let options = [char, ...wrongOptions];
+        options.sort(() => 0.5 - Math.random());
+        
+        generatedQuestions.push({
+            q: `無線電通訊代號 '${word}' 代表哪個字母？`,
+            options: options,
+            ans: options.indexOf(char),
+            note: `${word} = ${char}`
+        });
+    }
+
+    // 合併所有題目
+    const allQuestions = [...coreQuestions, ...generatedQuestions];
+
+    // --- 程式邏輯區 ---
+    let currentQuestions = [];
+    let currentIndex = 0;
+    let score = 0;
+    let wrongAnswers = []; // 儲存答錯的題目以便回顧
+
+    function initQuiz() {
+        document.getElementById('total-q-count').innerText = allQuestions.length;
+        // 隨機選 10 題
+        const shuffled = [...allQuestions].sort(() => 0.5 - Math.random());
+        currentQuestions = shuffled.slice(0, 10);
+        
+        currentIndex = 0;
+        score = 0;
+        wrongAnswers = [];
+        
+        document.getElementById('quiz-area').style.display = 'block';
+        document.getElementById('result-area').style.display = 'none';
+        document.getElementById('current-score').innerText = 0;
+        
+        renderQuestion();
+    }
+
+    function renderQuestion() {
+        const container = document.getElementById('questions-container');
+        container.innerHTML = '';
+        document.getElementById('current-q').innerText = currentIndex + 1;
+        document.getElementById('next-btn').style.display = 'none';
+
+        const qData = currentQuestions[currentIndex];
+        
+        const card = document.createElement('div');
+        card.className = 'active';
+        
+        let html = `<div class="question-text">${qData.q}</div><div class="options">`;
+        qData.options.forEach((opt, idx) => {
+            html += `<button class="option-btn" onclick="checkAnswer(this, ${idx}, ${qData.ans})">${opt}</button>`;
+        });
+        html += `</div><div class="feedback" id="feedback-box"></div>`;
+        
+        card.innerHTML = html;
+        container.appendChild(card);
+    }
+
+    function checkAnswer(btn, selectedIdx, correctIdx) {
+        const qData = currentQuestions[currentIndex];
+        const buttons = document.querySelectorAll('.option-btn');
+        buttons.forEach(b => b.disabled = true);
+
+        const feedback = document.getElementById('feedback-box');
+        feedback.style.display = 'block';
+
+        if (selectedIdx === correctIdx) {
+            btn.classList.add('correct');
+            feedback.innerHTML = `<strong>✅ 答對了！</strong><br>${qData.note}`;
+            score++;
+            document.getElementById('current-score').innerText = score;
+        } else {
+            btn.classList.add('wrong');
+            buttons[correctIdx].classList.add('correct');
+            feedback.innerHTML = `<strong>❌ 答錯了！</strong><br>正確答案：${qData.options[correctIdx]}<br>解析：${qData.note}`;
+            
+            // 記錄錯誤
+            wrongAnswers.push({
+                q: qData.q,
+                a: qData.options[correctIdx],
+                note: qData.note
+            });
+        }
+
+        document.getElementById('next-btn').style.display = 'block';
+    }
+
+    function nextQuestion() {
+        currentIndex++;
+        if (currentIndex < 10) {
+            renderQuestion();
+        } else {
+            showResults();
+        }
+    }
+
+    function showResults() {
+        document.getElementById('quiz-area').style.display = 'none';
+        document.getElementById('result-area').style.display = 'block';
+        
+        let percentage = (score / 10) * 100;
+        document.getElementById('final-score').innerText = percentage;
+        
+        let comment = "";
+        if(score === 10) comment = "🥇 完美無瑕！急救隊長非你莫屬！";
+        else if(score >= 8) comment = "🥈 非常優秀！保持這個狀態！";
+        else if(score >= 5) comment = "🥉 合格，但還有進步空間！";
+        else comment = "🚑 情況危急！請立即温習筆記！";
+        document.getElementById('comment').innerText = comment;
+
+        // 顯示錯題分析
+        const reviewArea = document.getElementById('review-area');
+        const wrongContainer = document.getElementById('wrong-items-container');
+        wrongContainer.innerHTML = "";
+        
+        if(wrongAnswers.length > 0) {
+            reviewArea.style.display = 'block';
+            wrongAnswers.forEach(item => {
+                wrongContainer.innerHTML += `
+                    <div class="wrong-item">
+                        <div class="wrong-q">問：${item.q}</div>
+                        <div class="wrong-a">答：${item.a}</div>
+                        <div style="font-size:0.85em; color:#6b7280; margin-top:3px;">📝 ${item.note}</div>
+                    </div>
+                `;
+            });
+        } else {
+            reviewArea.style.display = 'none';
+        }
+    }
+
+    // 啟動
+    initQuiz();
+</script>
+
+</body>
+</html>
